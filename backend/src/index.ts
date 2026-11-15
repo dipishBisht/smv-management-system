@@ -1,29 +1,17 @@
-import express from "express";
-import cors from "cors";
-import dotenv from "dotenv";
+import mongoose from "mongoose";
+import { createApp } from "./app.js";
+import { env } from "./config/env.js";
+import { Meeting } from "./models/Meeting.js";
 
-dotenv.config();
+async function main() {
+  await mongoose.connect(env.mongoUri);
+  await Meeting.syncIndexes();
+  createApp().listen(env.port, () =>
+    console.log(`API listening on http://localhost:${env.port}`),
+  );
+}
 
-const app = express();
-
-app.use(
-  cors({
-    origin: process.env.CLIENT_URL || "http://localhost:3000",
-    credentials: true,
-  })
-);
-
-app.use(express.json());
-
-app.get("/api/health", (_req, res) => {
-  res.status(200).json({
-    success: true,
-    message: "Sales Meeting Management API is running",
-  });
-});
-
-const PORT = process.env.PORT || 8080;
-
-app.listen(PORT, () => {
-  console.log(`Server running on http://localhost:${PORT}`);
+main().catch((e) => {
+  console.error(e);
+  process.exit(1);
 });
