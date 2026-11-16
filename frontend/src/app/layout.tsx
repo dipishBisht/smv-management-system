@@ -1,13 +1,18 @@
-import type { Metadata, Viewport } from 'next';
-import '@fontsource-variable/bricolage-grotesque';
-import '@fontsource-variable/hanken-grotesk';
-import './globals.css';
-import { AuthProvider } from '@/lib/auth';
+import type { Metadata, Viewport } from "next";
+import "./globals.css";
+import { AuthProvider } from "@/lib/auth";
 
-export const metadata: Metadata = { title: 'Optronix Visits', description: 'Sales meeting and visit management' };
-export const viewport: Viewport = { width: 'device-width', initialScale: 1 };
+export const metadata: Metadata = {
+  title: "Optronix Visits",
+  description: "Sales meeting and visit management",
+};
+export const viewport: Viewport = { width: "device-width", initialScale: 1 };
 
-export default function RootLayout({ children }: { children: React.ReactNode }) {
+export default function RootLayout({
+  children,
+}: {
+  children: React.ReactNode;
+}) {
   return (
     <html lang="en">
       <body>
