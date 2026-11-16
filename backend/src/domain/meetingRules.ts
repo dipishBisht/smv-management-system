@@ -2,7 +2,7 @@
  * Pure business rules for the meeting lifecycle. No DB, no Express, no clock access:
  * everything receives `now` explicitly so the rules are trivially unit-testable.
  */
-import type { MeetingStatus, Outcome } from './constants';
+import type { MeetingStatus, Outcome } from './con  stants';
 import { conflict, unprocessable } from '../utils/errors';
 
 const MIN = 60_000;
