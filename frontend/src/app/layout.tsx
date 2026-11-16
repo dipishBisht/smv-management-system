@@ -1,6 +1,7 @@
 import type { Metadata, Viewport } from "next";
-import "./globals.css";
 import { AuthProvider } from "@/lib/auth";
+import { ServerWakeup } from "@/components/ServerWakeup";
+import "./globals.css";
 
 export const metadata: Metadata = {
   title: "Optronix Visits",
@@ -17,6 +18,7 @@ export default function RootLayout({
     <html lang="en">
       <body>
         <AuthProvider>{children}</AuthProvider>
+        <ServerWakeup />
       </body>
     </html>
   );
