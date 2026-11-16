@@ -1,14 +1,6 @@
-import { type HydratedDocument, Schema, Types, model } from "mongoose";
-import {
-  MEETING_STATUSES,
-  OUTCOMES,
-  VISIT_END_REASONS,
-} from "../domain/constants";
-import type {
-  MeetingStatus,
-  Outcome,
-  VisitEndReason,
-} from "../domain/constants";
+import { type HydratedDocument, Schema, Types, model } from 'mongoose';
+import { MEETING_STATUSES, OUTCOMES, VISIT_END_REASONS } from '../domain/constants';
+import type { MeetingStatus, Outcome, VisitEndReason } from '../domain/constants';
 
 export interface GeoPoint {
   lat: number;
@@ -72,11 +64,7 @@ export interface IMeeting {
 }
 
 const GeoSchema = new Schema<GeoPoint>(
-  {
-    lat: { type: Number, required: true },
-    lng: { type: Number, required: true },
-    accuracy: Number,
-  },
+  { lat: { type: Number, required: true }, lng: { type: Number, required: true }, accuracy: Number },
   { _id: false },
 );
 
@@ -97,7 +85,7 @@ const VisitSchema = new Schema<Visit>(
 const HistorySchema = new Schema<HistoryEntry>(
   {
     at: { type: Date, required: true },
-    by: { type: Schema.Types.ObjectId, ref: "User", required: true },
+    by: { type: Schema.Types.ObjectId, ref: 'User', required: true },
     action: { type: String, required: true },
     from: { type: String, enum: [...MEETING_STATUSES, null], default: null },
     to: { type: String, enum: MEETING_STATUSES, required: true },
@@ -109,28 +97,18 @@ const HistorySchema = new Schema<HistoryEntry>(
 
 const MeetingSchema = new Schema<IMeeting>(
   {
-    accountId: {
-      type: Schema.Types.ObjectId,
-      ref: "Account",
-      required: true,
-      index: true,
-    },
+    accountId: { type: Schema.Types.ObjectId, ref: 'Account', required: true, index: true },
     contactId: { type: Schema.Types.ObjectId, required: true },
     contactName: { type: String, required: true },
     purpose: { type: String, required: true, trim: true, maxlength: 300 },
     scheduledStart: { type: Date, required: true },
     scheduledEnd: { type: Date, required: true },
     location: { type: String, required: true, trim: true, maxlength: 200 },
-    assignedTo: { type: Schema.Types.ObjectId, ref: "User", required: true },
-    createdBy: { type: Schema.Types.ObjectId, ref: "User", required: true },
+    assignedTo: { type: Schema.Types.ObjectId, ref: 'User', required: true },
+    createdBy: { type: Schema.Types.ObjectId, ref: 'User', required: true },
     notes: { type: String, maxlength: 2000 },
 
-    status: {
-      type: String,
-      enum: MEETING_STATUSES,
-      default: "scheduled",
-      index: true,
-    },
+    status: { type: String, enum: MEETING_STATUSES, default: 'scheduled', index: true },
     onSite: { type: Boolean, default: false },
     nextVisitAt: Date,
     visits: { type: [VisitSchema], default: [] },
@@ -156,12 +134,8 @@ MeetingSchema.index({ assignedTo: 1, scheduledStart: 1 });
  */
 MeetingSchema.index(
   { assignedTo: 1 },
-  {
-    unique: true,
-    partialFilterExpression: { onSite: true },
-    name: "one_active_visit_per_employee",
-  },
+  { unique: true, partialFilterExpression: { onSite: true }, name: 'one_active_visit_per_employee' },
 );
 
 export type MeetingDoc = HydratedDocument<IMeeting>;
-export const Meeting = model<IMeeting>("Meeting", MeetingSchema);
+export const Meeting = model<IMeeting>('Meeting', MeetingSchema);

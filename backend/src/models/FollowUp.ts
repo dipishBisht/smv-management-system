@@ -1,5 +1,5 @@
-import { type HydratedDocument, Schema, Types, model } from "mongoose";
-import { FOLLOW_UP_STATUSES, type FollowUpStatus } from "../domain/constants";
+import { type HydratedDocument, Schema, Types, model } from 'mongoose';
+import { FOLLOW_UP_STATUSES, type FollowUpStatus } from '../domain/constants';
 
 export interface IFollowUp {
   meetingId: Types.ObjectId;
@@ -10,7 +10,7 @@ export interface IFollowUp {
   dueDate: Date;
   status: FollowUpStatus;
   /** 'outcome' = created while recording a meeting outcome; 'manual' = added later by a user. */
-  source: "outcome" | "manual";
+  source: 'outcome' | 'manual';
   /** Which completion of the meeting produced it; lets a reopen cancel only the stale ones. */
   completionNo: number;
   completedAt?: Date;
@@ -21,19 +21,14 @@ export interface IFollowUp {
 
 const FollowUpSchema = new Schema<IFollowUp>(
   {
-    meetingId: {
-      type: Schema.Types.ObjectId,
-      ref: "Meeting",
-      required: true,
-      index: true,
-    },
-    accountId: { type: Schema.Types.ObjectId, ref: "Account", required: true },
-    ownerId: { type: Schema.Types.ObjectId, ref: "User", required: true },
-    createdBy: { type: Schema.Types.ObjectId, ref: "User", required: true },
+    meetingId: { type: Schema.Types.ObjectId, ref: 'Meeting', required: true, index: true },
+    accountId: { type: Schema.Types.ObjectId, ref: 'Account', required: true },
+    ownerId: { type: Schema.Types.ObjectId, ref: 'User', required: true },
+    createdBy: { type: Schema.Types.ObjectId, ref: 'User', required: true },
     description: { type: String, required: true, trim: true, maxlength: 500 },
     dueDate: { type: Date, required: true },
-    status: { type: String, enum: FOLLOW_UP_STATUSES, default: "open" },
-    source: { type: String, enum: ["outcome", "manual"], required: true },
+    status: { type: String, enum: FOLLOW_UP_STATUSES, default: 'open' },
+    source: { type: String, enum: ['outcome', 'manual'], required: true },
     completionNo: { type: Number, default: 0 },
     completedAt: Date,
     completionNote: String,
@@ -46,4 +41,4 @@ const FollowUpSchema = new Schema<IFollowUp>(
 FollowUpSchema.index({ ownerId: 1, status: 1, dueDate: 1 });
 
 export type FollowUpDoc = HydratedDocument<IFollowUp>;
-export const FollowUp = model<IFollowUp>("FollowUp", FollowUpSchema);
+export const FollowUp = model<IFollowUp>('FollowUp', FollowUpSchema);

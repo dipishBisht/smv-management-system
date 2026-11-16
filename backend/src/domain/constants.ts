@@ -6,7 +6,7 @@ export const MEETING_STATUSES = [
   'confirmed',
   'checked_in',
   'in_progress',
-  'on_hold',
+  'on_hold', // awaiting a return visit (customer asked us to come back, or a manager reopened the meeting)
   'completed',
   'cancelled',
 ] as const;

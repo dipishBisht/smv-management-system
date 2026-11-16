@@ -16,7 +16,18 @@ import {
 } from "../validators/schemas";
 
 export const meetingsRouter = Router();
+
 meetingsRouter.use(authenticate);
+
+const getId = (req: { params: { id?: string | string[] } }): string => {
+  const id = req.params.id;
+
+  if (typeof id !== "string") {
+    throw new Error("Invalid meeting ID");
+  }
+
+  return id;
+};
 
 const view = async (req: any, id: string) => ({
   meeting: await svc.getMeeting(actorOf(req), id),
@@ -26,7 +37,11 @@ meetingsRouter.get(
   "/",
   validate({ query: listMeetingsQuery }),
   asyncHandler(async (req, res) => {
-    res.json(await svc.listMeetings(actorOf(req), req.query as any));
+    const query = res.locals.validatedQuery as svc.ListQuery;
+
+    const result = await svc.listMeetings(actorOf(req), query);
+
+    res.json(result);
   }),
 );
 
@@ -43,9 +58,7 @@ meetingsRouter.get(
   "/:id",
   validate({ params: idParam }),
   asyncHandler(async (req, res) => {
-    if (req.params.id !== typeof String) return;
-
-    res.json(await view(req, req.params.id));
+    res.json(await view(req, getId(req)));
   }),
 );
 
@@ -53,62 +66,73 @@ meetingsRouter.patch(
   "/:id",
   validate({ params: idParam, body: updateMeetingBody }),
   asyncHandler(async (req, res) => {
-    if (req.params.id !== typeof String) return;
+    const id = getId(req);
 
-    await svc.updateDetails(actorOf(req), req.params.id, req.body);
-    res.json(await view(req, req.params.id));
+    await svc.updateDetails(actorOf(req), id, req.body);
+
+    res.json(await view(req, id));
   }),
 );
 
-// ---- lifecycle transitions (each one is an explicit command, not a generic status PATCH)
+// ---- Lifecycle transitions
+
 const transition = (
   path: string,
   schema: any,
-  handler: (req: any) => Promise<unknown>,
+  handler: (req: any, id: string) => Promise<unknown>,
 ) =>
   meetingsRouter.post(
     `/:id/${path}`,
-    validate({ params: idParam, ...(schema ? { body: schema } : {}) }),
+    validate({
+      params: idParam,
+      ...(schema ? { body: schema } : {}),
+    }),
     asyncHandler(async (req, res) => {
-      const extra = (await handler(req)) as Record<string, unknown> | undefined;
+      const id = getId(req);
 
-      if (req.params.id !== typeof String) return;
+      const extra = (await handler(req, id)) as
+        | Record<string, unknown>
+        | undefined;
 
-      res.json({ ...(await view(req, req.params.id)), ...(extra ?? {}) });
+      res.json({
+        ...(await view(req, id)),
+        ...(extra ?? {}),
+      });
     }),
   );
 
-transition("confirm", null, (req) =>
-  svc.confirmMeeting(actorOf(req), req.params.id),
+transition("confirm", null, (req, id) => svc.confirmMeeting(actorOf(req), id));
+
+transition("reschedule", rescheduleBody, (req, id) =>
+  svc.rescheduleMeeting(actorOf(req), id, req.body),
 );
-transition("reschedule", rescheduleBody, (req) =>
-  svc.rescheduleMeeting(actorOf(req), req.params.id, req.body),
+
+transition("cancel", reasonBody, (req, id) =>
+  svc.cancelMeeting(actorOf(req), id, req.body.reason),
 );
-transition("cancel", reasonBody, (req) =>
-  svc.cancelMeeting(actorOf(req), req.params.id, req.body.reason),
+
+transition("check-in", checkInBody, (req, id) =>
+  svc.checkIn(actorOf(req), id, req.body.location),
 );
-transition("check-in", checkInBody, (req) =>
-  svc.checkIn(actorOf(req), req.params.id, req.body.location),
-);
-transition("start", null, (req) =>
-  svc.startMeeting(actorOf(req), req.params.id),
-);
-transition("check-out", checkOutBody, async (req) => {
-  const { followUp } = await svc.checkOut(
-    actorOf(req),
-    req.params.id,
-    req.body,
-  );
+
+transition("start", null, (req, id) => svc.startMeeting(actorOf(req), id));
+
+transition("check-out", checkOutBody, async (req, id) => {
+  const { followUp } = await svc.checkOut(actorOf(req), id, req.body);
+
   return { followUp };
 });
-transition("complete", completeWithoutVisitBody, async (req) => {
+
+transition("complete", completeWithoutVisitBody, async (req, id) => {
   const { followUp } = await svc.completeWithoutVisit(
     actorOf(req),
-    req.params.id,
+    id,
     req.body,
   );
+
   return { followUp };
 });
-transition("reopen", reasonBody, (req) =>
-  svc.reopenMeeting(actorOf(req), req.params.id, req.body.reason),
+
+transition("reopen", reasonBody, (req, id) =>
+  svc.reopenMeeting(actorOf(req), id, req.body.reason),
 );

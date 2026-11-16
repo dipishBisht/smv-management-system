@@ -1,18 +1,31 @@
-import type { NextFunction, Request, Response } from "express";
-import { z } from "zod";
+
+import type { NextFunction, Request, Response } from 'express';
+import type { ZodType } from 'zod';
+
+interface ValidationSchemas {
+  body?: ZodType;
+  query?: ZodType;
+  params?: ZodType;
+}
 
 export const validate =
-  (schemas: { body?: z.ZodType; query?: z.ZodType; params?: z.ZodType }) =>
-  (req: Request, _res: Response, next: NextFunction) => {
+  (schemas: ValidationSchemas) =>
+  (req: Request, res: Response, next: NextFunction) => {
     try {
-      if (schemas.params)
-        req.params = schemas.params.parse(req.params) as Request["params"];
-      if (schemas.query)
-        req.query = schemas.query.parse(req.query) as Request["params"];
-      if (schemas.body)
-        req.body = schemas.body.parse(req.body) as Request["params"];
+      if (schemas.params) {
+        res.locals.validatedParams = schemas.params.parse(req.params);
+      }
+
+      if (schemas.query) {
+        res.locals.validatedQuery = schemas.query.parse(req.query);
+      }
+
+      if (schemas.body) {
+        req.body = schemas.body.parse(req.body);
+      }
+
       next();
-    } catch (e) {
-      next(e); // ZodError handled in errorHandler -> 400
+    } catch (error) {
+      next(error);
     }
   };

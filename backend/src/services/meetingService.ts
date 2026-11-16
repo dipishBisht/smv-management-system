@@ -6,14 +6,14 @@
  * If another request changed the meeting in between, the update matches nothing and we answer 409.
  * Cross-collection steps (follow-up creation) use create-then-compensate; see README trade-offs.
  */
+import type { QueryFilter, UpdateQuery } from "mongoose";
 import { Types } from "mongoose";
-import type { UpdateQuery, QueryFilter } from "mongoose";
+import { ACTIVE_STATUSES } from "../domain/constants";
 import type {
   MeetingStatus,
   Outcome,
   VisitEndReason,
 } from "../domain/constants";
-import { ACTIVE_STATUSES } from "../domain/constants";
 import {
   assertCanComplete,
   assertFollowUpPresence,
@@ -35,8 +35,8 @@ import { now } from "../utils/clock";
 import { conflict, forbidden, notFound, unprocessable } from "../utils/errors";
 import { loadAccessibleMeeting, meetingScope } from "./access";
 import {
-  type FollowUpInput,
   createFollowUp,
+  type FollowUpInput,
   validateFollowUpInput,
 } from "./followUpService";
 
@@ -44,8 +44,6 @@ import {
 
 const clean = <T extends Record<string, unknown>>(o: T): T =>
   Object.fromEntries(Object.entries(o).filter(([, v]) => v !== undefined)) as T;
-
-type MeetingHistoryEntry = NonNullable<MeetingDoc["history"]>[number];
 
 const entry = (
   at: Date,
@@ -55,7 +53,7 @@ const entry = (
   to: MeetingStatus,
   note?: string,
   meta?: Record<string, unknown>,
-): MeetingHistoryEntry => ({
+) => ({
   at,
   by: new Types.ObjectId(actor.id),
   action,
@@ -565,9 +563,11 @@ export async function checkOut(actor: Actor, id: string, input: CheckOutInput) {
   const visit = m.visits[idx];
 
   if (!visit) {
-    throw conflict("NOT_ON_SITE", "No active visit was found for this meeting");
+    throw conflict(
+      "VISIT_NOT_FOUND",
+      "No active visit was found for this meeting.",
+    );
   }
-
   const durationMs = Math.max(0, t.getTime() - visit.checkInAt.getTime());
   const visitFilter = { [`visits.${idx}.checkOutAt`]: { $exists: false } };
   const closeVisit = (reason: VisitEndReason) => ({

@@ -13,6 +13,7 @@ import {
 } from "../validators/schemas";
 
 export const followUpsRouter = Router();
+
 followUpsRouter.use(authenticate);
 
 followUpsRouter.get(
@@ -28,10 +29,12 @@ followUpsRouter.post(
   validate({ body: createFollowUpBody }),
   asyncHandler(async (req, res) => {
     const { meetingId, ...input } = req.body;
+
     const fu = await svc.createManualFollowUp(actorOf(req), meetingId, input);
-    res
-      .status(201)
-      .json({ followUp: await svc.getFollowUp(actorOf(req), fu.id) });
+
+    res.status(201).json({
+      followUp: await svc.getFollowUp(actorOf(req), fu.id),
+    });
   }),
 );
 
@@ -39,9 +42,11 @@ followUpsRouter.get(
   "/:id",
   validate({ params: idParam }),
   asyncHandler(async (req, res) => {
-    if (req.params.id !== typeof String) return;
+    const id = req.params.id as string;
 
-    res.json({ followUp: await svc.getFollowUp(actorOf(req), req.params.id) });
+    res.json({
+      followUp: await svc.getFollowUp(actorOf(req), id),
+    });
   }),
 );
 
@@ -49,10 +54,10 @@ followUpsRouter.patch(
   "/:id",
   validate({ params: idParam, body: updateFollowUpBody }),
   asyncHandler(async (req, res) => {
-    if (req.params.id !== typeof String) return;
+    const id = req.params.id as string;
 
     res.json({
-      followUp: await svc.updateFollowUp(actorOf(req), req.params.id, req.body),
+      followUp: await svc.updateFollowUp(actorOf(req), id, req.body),
     });
   }),
 );
@@ -61,14 +66,10 @@ followUpsRouter.post(
   "/:id/complete",
   validate({ params: idParam, body: completeFollowUpBody }),
   asyncHandler(async (req, res) => {
-    if (req.params.id !== typeof String) return;
+    const id = req.params.id as string;
 
     res.json({
-      followUp: await svc.completeFollowUp(
-        actorOf(req),
-        req.params.id,
-        req.body.note,
-      ),
+      followUp: await svc.completeFollowUp(actorOf(req), id, req.body.note),
     });
   }),
 );
@@ -77,14 +78,10 @@ followUpsRouter.post(
   "/:id/cancel",
   validate({ params: idParam, body: cancelFollowUpBody }),
   asyncHandler(async (req, res) => {
-    if (req.params.id !== typeof String) return;
+    const id = req.params.id as string;
 
     res.json({
-      followUp: await svc.cancelFollowUp(
-        actorOf(req),
-        req.params.id,
-        req.body.reason,
-      ),
+      followUp: await svc.cancelFollowUp(actorOf(req), id, req.body.reason),
     });
   }),
 );

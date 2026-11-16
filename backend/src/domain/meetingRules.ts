@@ -1,4 +1,4 @@
-  /**
+/**
  * Pure business rules for the meeting lifecycle. No DB, no Express, no clock access:
  * everything receives `now` explicitly so the rules are trivially unit-testable.
  */
