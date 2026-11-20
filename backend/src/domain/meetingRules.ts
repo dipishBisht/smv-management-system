@@ -2,8 +2,8 @@
  * Pure business rules for the meeting lifecycle. No DB, no Express, no clock access:
  * everything receives `now` explicitly so the rules are trivially unit-testable.
  */
-import type { MeetingStatus, Outcome } from './con  stants';
-import { conflict, unprocessable } from '../utils/errors';
+import type { MeetingStatus, Outcome } from "./constants";
+import { conflict, unprocessable } from "../utils/errors";
 
 const MIN = 60_000;
 const HOUR = 60 * MIN;
@@ -25,39 +25,53 @@ export const RULES = {
 
 /** Allowed lifecycle transitions. Anything not listed is rejected with 409. */
 const TRANSITIONS: Record<MeetingStatus, readonly MeetingStatus[]> = {
-  scheduled: ['confirmed', 'cancelled'],
+  scheduled: ["confirmed", "cancelled"],
   // confirmed -> scheduled = reschedule (needs re-confirmation)
   // confirmed -> completed = only "unable to meet" (customer no-show), see assertCanComplete
-  confirmed: ['checked_in', 'scheduled', 'completed', 'cancelled'],
-  checked_in: ['in_progress', 'on_hold', 'completed'],
-  in_progress: ['on_hold', 'completed'],
+  confirmed: ["checked_in", "scheduled", "completed", "cancelled"],
+  checked_in: ["in_progress", "on_hold", "completed"],
+  in_progress: ["on_hold", "completed"],
   // on_hold -> checked_in = the return visit
-  on_hold: ['checked_in', 'completed', 'cancelled'],
+  on_hold: ["checked_in", "completed", "cancelled"],
   // completed -> on_hold = manager reopen
-  completed: ['on_hold'],
+  completed: ["on_hold"],
   cancelled: [],
 };
 
-export const canTransition = (from: MeetingStatus, to: MeetingStatus) => TRANSITIONS[from].includes(to);
+export const canTransition = (from: MeetingStatus, to: MeetingStatus) =>
+  TRANSITIONS[from].includes(to);
 
 export function assertTransition(from: MeetingStatus, to: MeetingStatus): void {
   if (!canTransition(from, to)) {
-    throw conflict('INVALID_TRANSITION', `A meeting cannot move from "${from}" to "${to}"`, { from, to });
+    throw conflict(
+      "INVALID_TRANSITION",
+      `A meeting cannot move from "${from}" to "${to}"`,
+      { from, to },
+    );
   }
 }
 
 export function assertValidWindow(start: Date, end: Date): void {
   if (!(end.getTime() > start.getTime())) {
-    throw unprocessable('INVALID_TIME_WINDOW', 'Scheduled end must be after scheduled start');
+    throw unprocessable(
+      "INVALID_TIME_WINDOW",
+      "Scheduled end must be after scheduled start",
+    );
   }
   if (end.getTime() - start.getTime() > RULES.MAX_DURATION_MS) {
-    throw unprocessable('MEETING_TOO_LONG', 'A meeting cannot be longer than 8 hours');
+    throw unprocessable(
+      "MEETING_TOO_LONG",
+      "A meeting cannot be longer than 8 hours",
+    );
   }
 }
 
 export function assertNotInPast(start: Date, now: Date): void {
   if (start.getTime() < now.getTime() - RULES.CREATE_GRACE_MS) {
-    throw unprocessable('START_IN_PAST', 'A meeting cannot be scheduled in the past');
+    throw unprocessable(
+      "START_IN_PAST",
+      "A meeting cannot be scheduled in the past",
+    );
   }
 }
 
@@ -77,29 +91,48 @@ export interface CheckInSubject {
  *  - first visit: expected at scheduledStart
  *  - return visit: expected at the agreed return time (nextVisitAt), falling back to scheduledStart
  */
-export function evaluateCheckIn(m: CheckInSubject, now: Date): { expectedAt: Date; lateMinutes: number; isReturn: boolean } {
-  if (m.status !== 'confirmed' && m.status !== 'on_hold') {
+export function evaluateCheckIn(
+  m: CheckInSubject,
+  now: Date,
+): { expectedAt: Date; lateMinutes: number; isReturn: boolean } {
+  if (m.status !== "confirmed" && m.status !== "on_hold") {
     throw conflict(
-      'INVALID_TRANSITION',
-      m.status === 'scheduled'
-        ? 'The meeting must be confirmed before you can check in'
+      "INVALID_TRANSITION",
+      m.status === "scheduled"
+        ? "The meeting must be confirmed before you can check in"
         : `A meeting in status "${m.status}" cannot be checked in to`,
-      { from: m.status, to: 'checked_in' },
+      { from: m.status, to: "checked_in" },
     );
   }
   const isReturn = m.visitCount > 0;
-  const expectedAt = isReturn && m.nextVisitAt ? m.nextVisitAt : m.scheduledStart;
+  const expectedAt =
+    isReturn && m.nextVisitAt ? m.nextVisitAt : m.scheduledStart;
 
   if (now.getTime() < expectedAt.getTime() - RULES.CHECK_IN_EARLY_MS) {
-    throw unprocessable('TOO_EARLY_TO_CHECK_IN', 'Check-in opens 30 minutes before the expected start', {
-      opensAt: new Date(expectedAt.getTime() - RULES.CHECK_IN_EARLY_MS).toISOString(),
-    });
+    throw unprocessable(
+      "TOO_EARLY_TO_CHECK_IN",
+      "Check-in opens 30 minutes before the expected start",
+      {
+        opensAt: new Date(
+          expectedAt.getTime() - RULES.CHECK_IN_EARLY_MS,
+        ).toISOString(),
+      },
+    );
   }
   // A stale, never-started meeting must be rescheduled rather than checked into days later.
-  if (m.status === 'confirmed' && now.getTime() > m.scheduledEnd.getTime() + RULES.CHECK_IN_LATE_MS) {
-    throw unprocessable('CHECK_IN_WINDOW_EXPIRED', 'The check-in window has passed; reschedule the meeting');
+  if (
+    m.status === "confirmed" &&
+    now.getTime() > m.scheduledEnd.getTime() + RULES.CHECK_IN_LATE_MS
+  ) {
+    throw unprocessable(
+      "CHECK_IN_WINDOW_EXPIRED",
+      "The check-in window has passed; reschedule the meeting",
+    );
   }
-  const lateMinutes = Math.max(0, Math.floor((now.getTime() - expectedAt.getTime()) / MIN));
+  const lateMinutes = Math.max(
+    0,
+    Math.floor((now.getTime() - expectedAt.getTime()) / MIN),
+  );
   return { expectedAt, lateMinutes, isReturn };
 }
 
@@ -114,48 +147,81 @@ export function assertCanComplete(
   outcome: Outcome,
   ctx: { now: Date; scheduledStart: Date },
 ): void {
-  assertTransition(from, 'completed');
-  if (from === 'in_progress') return;
-  if (outcome !== 'unable_to_meet') {
+  assertTransition(from, "completed");
+  if (from === "in_progress") return;
+  if (outcome !== "unable_to_meet") {
     throw conflict(
-      'MEETING_NOT_STARTED',
+      "MEETING_NOT_STARTED",
       'Start the meeting before completing it (only "Unable to meet" can be recorded without starting)',
       { from, outcome },
     );
   }
-  if (from === 'confirmed' && ctx.now.getTime() < ctx.scheduledStart.getTime()) {
-    throw unprocessable('TOO_EARLY_TO_MARK_UNABLE', 'Cannot record "Unable to meet" before the scheduled start');
+  if (
+    from === "confirmed" &&
+    ctx.now.getTime() < ctx.scheduledStart.getTime()
+  ) {
+    throw unprocessable(
+      "TOO_EARLY_TO_MARK_UNABLE",
+      'Cannot record "Unable to meet" before the scheduled start',
+    );
   }
 }
 
 /** "Follow-up required" is meaningless without an owner and due date. */
-export function assertFollowUpPresence(outcome: Outcome, hasFollowUp: boolean): void {
-  if (outcome === 'follow_up_required' && !hasFollowUp) {
-    throw unprocessable('FOLLOW_UP_REQUIRED', 'Outcome "follow_up_required" needs a follow-up with an owner and due date');
+export function assertFollowUpPresence(
+  outcome: Outcome,
+  hasFollowUp: boolean,
+): void {
+  if (outcome === "follow_up_required" && !hasFollowUp) {
+    throw unprocessable(
+      "FOLLOW_UP_REQUIRED",
+      'Outcome "follow_up_required" needs a follow-up with an owner and due date',
+    );
   }
 }
 
 export function assertFutureDueDate(due: Date, now: Date): void {
   if (due.getTime() <= now.getTime()) {
-    throw unprocessable('DUE_DATE_IN_PAST', 'Follow-up due date must be in the future');
+    throw unprocessable(
+      "DUE_DATE_IN_PAST",
+      "Follow-up due date must be in the future",
+    );
   }
   if (due.getTime() > now.getTime() + RULES.MAX_FOLLOW_UP_AHEAD_MS) {
-    throw unprocessable('DUE_DATE_TOO_FAR', 'Follow-up due date cannot be more than a year away');
+    throw unprocessable(
+      "DUE_DATE_TOO_FAR",
+      "Follow-up due date cannot be more than a year away",
+    );
   }
 }
 
 export function assertReturnAt(returnAt: Date, now: Date): void {
   if (returnAt.getTime() <= now.getTime()) {
-    throw unprocessable('RETURN_TIME_IN_PAST', 'The agreed return time must be in the future');
+    throw unprocessable(
+      "RETURN_TIME_IN_PAST",
+      "The agreed return time must be in the future",
+    );
   }
   if (returnAt.getTime() > now.getTime() + RULES.MAX_RETURN_AHEAD_MS) {
-    throw unprocessable('RETURN_TIME_TOO_FAR', 'A return visit cannot be more than 14 days away; reschedule instead');
+    throw unprocessable(
+      "RETURN_TIME_TOO_FAR",
+      "A return visit cannot be more than 14 days away; reschedule instead",
+    );
   }
 }
 
-export function assertWithinReopenWindow(completedAt: Date | undefined, now: Date): void {
-  if (completedAt && now.getTime() - completedAt.getTime() > RULES.REOPEN_WINDOW_MS) {
-    throw unprocessable('REOPEN_WINDOW_EXPIRED', 'Meetings completed more than 30 days ago can only be reopened by an admin');
+export function assertWithinReopenWindow(
+  completedAt: Date | undefined,
+  now: Date,
+): void {
+  if (
+    completedAt &&
+    now.getTime() - completedAt.getTime() > RULES.REOPEN_WINDOW_MS
+  ) {
+    throw unprocessable(
+      "REOPEN_WINDOW_EXPIRED",
+      "Meetings completed more than 30 days ago can only be reopened by an admin",
+    );
   }
 }
 

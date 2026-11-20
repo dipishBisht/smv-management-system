@@ -1,14 +1,14 @@
-import bcrypt from 'bcryptjs';
-import jwt, { type SignOptions } from 'jsonwebtoken';
-import type { StringValue } from 'ms';
-import { env } from '../config/env';
-import { User } from '../models/User';
-import { unauthorized } from '../utils/errors';
+import bcrypt from "bcryptjs";
+import jwt, { type SignOptions } from "jsonwebtoken";
+import type { StringValue } from "ms";
+import { env } from "../config/env";
+import { User } from "../models/User";
+import { unauthorized } from "../utils/errors";
 
 export async function login(email: string, password: string) {
   const user = await User.findOne({
     email: email.toLowerCase(),
-  }).select('+passwordHash');
+  }).select("+passwordHash");
 
   const ok =
     user &&
@@ -16,20 +16,16 @@ export async function login(email: string, password: string) {
     (await bcrypt.compare(password, user.passwordHash));
 
   if (!user || !ok) {
-    throw unauthorized('Invalid email or password');
+    throw unauthorized("Invalid email or password");
   }
 
-  const expiresIn: NonNullable<SignOptions['expiresIn']> =
-    (env.jwtExpiresIn ?? '1d') as StringValue;
+  const expiresIn: NonNullable<SignOptions["expiresIn"]> = (env.jwtExpiresIn ??
+    "1d") as StringValue;
 
-  const token = jwt.sign(
-    { role: user.role },
-    env.jwtSecret,
-    {
-      subject: user.id,
-      expiresIn,
-    },
-  );
+  const token = jwt.sign({ role: user.role }, env.jwtSecret, {
+    subject: user.id,
+    expiresIn,
+  });
 
   return {
     token,
@@ -37,5 +33,4 @@ export async function login(email: string, password: string) {
   };
 }
 
-export const hashPassword = (plain: string) =>
-  bcrypt.hash(plain, 10);
+export const hashPassword = (plain: string) => bcrypt.hash(plain, 10);

@@ -1,13 +1,22 @@
-import { z } from 'zod';
-import { MEETING_STATUSES, OUTCOMES, ROLES, FOLLOW_UP_STATUSES } from '../domain/constants';
+import { z } from "zod";
+import {
+  MEETING_STATUSES,
+  OUTCOMES,
+  ROLES,
+  FOLLOW_UP_STATUSES,
+} from "../domain/constants";
 
-export const objectId = z.string().regex(/^[a-f\d]{24}$/i, 'Invalid id');
+export const objectId = z.string().regex(/^[a-f\d]{24}$/i, "Invalid id");
 export const idParam = z.object({ id: objectId });
 
 /** ISO-8601 with timezone offset (e.g. 2026-11-16T10:00:00+05:30 or ...Z) -> Date. */
 export const isoDate = z
   .string()
-  .datetime({ offset: true, message: 'Must be an ISO-8601 datetime with timezone, e.g. 2026-11-16T10:00:00Z' })
+  .datetime({
+    offset: true,
+    message:
+      "Must be an ISO-8601 datetime with timezone, e.g. 2026-11-16T10:00:00Z",
+  })
   .transform((s) => new Date(s));
 
 const text = (min: number, max: number) => z.string().trim().min(min).max(max);
@@ -24,7 +33,10 @@ const pagination = {
 };
 
 // ---- auth / users
-export const loginBody = z.object({ email: z.string().email(), password: z.string().min(1) });
+export const loginBody = z.object({
+  email: z.string().email(),
+  password: z.string().min(1),
+});
 
 export const createUserBody = z.object({
   name: text(2, 100),
@@ -41,7 +53,7 @@ export const updateUserBody = z
     managerId: objectId.nullable().optional(),
     isActive: z.boolean().optional(),
   })
-  .refine((v) => Object.keys(v).length > 0, 'Provide at least one field');
+  .refine((v) => Object.keys(v).length > 0, "Provide at least one field");
 
 // ---- accounts
 const contactBody = z.object({
@@ -57,10 +69,17 @@ export const createAccountBody = z.object({
   contacts: z.array(contactBody).max(20).default([]),
 });
 export const updateAccountBody = z
-  .object({ name: text(2, 150).optional(), address: text(1, 300).optional(), industry: text(1, 100).optional() })
-  .refine((v) => Object.keys(v).length > 0, 'Provide at least one field');
+  .object({
+    name: text(2, 150).optional(),
+    address: text(1, 300).optional(),
+    industry: text(1, 100).optional(),
+  })
+  .refine((v) => Object.keys(v).length > 0, "Provide at least one field");
 export const addContactBody = contactBody;
-export const listAccountsQuery = z.object({ search: z.string().trim().max(100).optional(), ...pagination });
+export const listAccountsQuery = z.object({
+  search: z.string().trim().max(100).optional(),
+  ...pagination,
+});
 
 // ---- follow-ups
 export const followUpInput = z.object({
@@ -71,13 +90,20 @@ export const followUpInput = z.object({
 
 export const createFollowUpBody = followUpInput.extend({ meetingId: objectId });
 export const updateFollowUpBody = z
-  .object({ ownerId: objectId.optional(), dueDate: isoDate.optional(), description: text(3, 500).optional() })
-  .refine((v) => Object.keys(v).length > 0, 'Provide at least one field');
+  .object({
+    ownerId: objectId.optional(),
+    dueDate: isoDate.optional(),
+    description: text(3, 500).optional(),
+  })
+  .refine((v) => Object.keys(v).length > 0, "Provide at least one field");
 export const completeFollowUpBody = z.object({ note: text(1, 500).optional() });
 export const cancelFollowUpBody = z.object({ reason: text(3, 300) });
 export const listFollowUpsQuery = z.object({
   status: z.enum(FOLLOW_UP_STATUSES).optional(),
-  overdue: z.enum(['true', 'false']).transform((v) => v === 'true').optional(),
+  overdue: z
+    .enum(["true", "false"])
+    .transform((v) => v === "true")
+    .optional(),
   ownerId: objectId.optional(),
   meetingId: objectId.optional(),
   ...pagination,
@@ -102,7 +128,7 @@ export const updateMeetingBody = z
     notes: z.string().trim().max(2000).optional(),
     contactId: objectId.optional(),
   })
-  .refine((v) => Object.keys(v).length > 0, 'Provide at least one field');
+  .refine((v) => Object.keys(v).length > 0, "Provide at least one field");
 
 export const rescheduleBody = z.object({
   scheduledStart: isoDate,
@@ -113,16 +139,16 @@ export const rescheduleBody = z.object({
 export const reasonBody = z.object({ reason: text(3, 300) });
 export const checkInBody = z.object({ location: geoPoint });
 
-export const checkOutBody = z.discriminatedUnion('disposition', [
+export const checkOutBody = z.discriminatedUnion("disposition", [
   z.object({
-    disposition: z.literal('complete'),
+    disposition: z.literal("complete"),
     location: geoPoint,
     outcome: z.enum(OUTCOMES),
     outcomeNotes: z.string().trim().max(2000).optional(),
     followUp: followUpInput.optional(),
   }),
   z.object({
-    disposition: z.literal('return_later'),
+    disposition: z.literal("return_later"),
     location: geoPoint,
     returnAt: isoDate,
     reason: text(3, 300).optional(),

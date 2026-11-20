@@ -1,4 +1,4 @@
-import { type HydratedDocument, Schema, Types, model } from 'mongoose';
+import { type HydratedDocument, Schema, Types, model } from "mongoose";
 
 export interface IContact {
   name: string;
@@ -31,10 +31,10 @@ const AccountSchema = new Schema<IAccount>(
     address: { type: String, trim: true },
     industry: { type: String, trim: true },
     contacts: { type: [ContactSchema], default: [] },
-    createdBy: { type: Schema.Types.ObjectId, ref: 'User', required: true },
+    createdBy: { type: Schema.Types.ObjectId, ref: "User", required: true },
   },
   { timestamps: true, toJSON: { virtuals: true, versionKey: false } },
 );
 
 export type AccountDoc = HydratedDocument<IAccount>;
-export const Account = model<IAccount>('Account', AccountSchema);
+export const Account = model<IAccount>("Account", AccountSchema);
